@@ -16,14 +16,28 @@ const {
 
 // ------------ Google Sheets Setup ------------
 function getGoogleAuth() {
-    const keyFile = GOOGLE_SERVICE_ACCOUNT_JSON;
-    if (!fs.existsSync(keyFile)) {
-        throw new Error(`Google service account JSON file not found at path: ${keyFile}`);
-    }
+  // Prefer JSON from env (For Heroku). Fallback to file for local dev.
+  const jsonFromEnv = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+
+  if (jsonFromEnv) {
+    const creds = JSON.parse(jsonFromEnv);
     return new google.auth.GoogleAuth({
-        keyFile,
-        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+      credentials: creds,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
     });
+  }
+
+  const keyFile = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!keyFile || !fs.existsSync(keyFile)) {
+    throw new Error(
+      `No GOOGLE_SERVICE_ACCOUNT_KEY env var set and JSON file not found at: ${keyFile}`
+    );
+  }
+
+  return new google.auth.GoogleAuth({
+    keyFile,
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  });
 }
 
 
