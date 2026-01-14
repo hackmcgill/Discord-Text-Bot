@@ -4,6 +4,7 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const { google } = require('googleapis');
 const { DateTime } = require('luxon');
 const fs = require('fs');
+const path = require("path");
 
 const {
     DISCORD_BOT_TOKEN,
@@ -13,6 +14,42 @@ const {
     TIMEZONE= "America/Toronto",
     POLL_SECONDS='60',
 } = process.env;
+
+// Load roles and their respective IDs from roles.json
+function loadRoleMap() {
+  const rolesPath = path.join(__dirname, "roles.json");
+  if (!fs.existsSync(rolesPath)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(rolesPath, "utf8"));
+  } catch (e) {
+    console.warn("roles.json exists but could not be parsed:", e.message);
+    return {};
+  }
+}
+
+const ROLE_MAP = loadRoleMap();
+
+/**
+ * Replaces @RoleName occurrences with <@&ROLE_ID>.
+ * Only replaces roles that exist in roles.json.
+ */
+function replaceRoleMentions(content) {
+  let out = String(content);
+
+  for (const [roleName, roleId] of Object.entries(ROLE_MAP)) {
+    // Replace @Dev, @Design, etc. as standalone tokens.
+    // Avoid matching inside emails/words by using boundaries.
+    const re = new RegExp(`(^|\\s)@${escapeRegex(roleName)}(?=\\s|$)`, "g");
+    out = out.replace(re, `$1<@&${roleId}>`);
+  }
+
+  return out;
+}
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 
 // ------------ Google Sheets Setup ------------
 function getGoogleAuth() {
@@ -127,7 +164,15 @@ async function pollAndSend() {
                     console.log(`Row ${i + 1}: Invalid or non-text channel ID "${channelId}"`);
                     continue;   
                 }
-                await channel.send(String(message));
+                const finalMessage = replaceRoleMentions(message);
+
+                await channel.send({
+                content: finalMessage,
+                allowedMentions: {
+                    parse: ["everyone", "roles"], // allows @everyone and <@&roleId> pings
+                },
+                });
+
 
                 // Mark as sent
                 const sentAtStr = now.toFormat('yyyy-MM-dd HH:mm');
