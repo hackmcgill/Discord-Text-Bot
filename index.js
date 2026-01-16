@@ -39,7 +39,7 @@ function replaceRoleMentions(content) {
   for (const [roleName, roleId] of Object.entries(ROLE_MAP)) {
     // Replace @Dev, @Design, etc. as standalone tokens.
     // Avoid matching inside emails/words by using boundaries.
-    const re = new RegExp(`(^|\\s)@${escapeRegex(roleName)}(?=\\s|$)`, "g");
+    const re = new RegExp(`(^|\\s)@${escapeRegex(roleName)}s?(?=\\b)`, "gi");
     out = out.replace(re, `$1<@&${roleId}>`);
   }
 
