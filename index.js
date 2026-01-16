@@ -97,10 +97,21 @@ function normalizeBool(v) {
 }
 
 function parseSendAt(sendAtRaw) {
-    // Expecting "YYYY-MM-DD HH:mm" in TIMEZONE
-    const dt = DateTime.fromFormat(String(sendAtRaw).trim(), 'yyyy-MM-dd HH:mm', { zone: TIMEZONE });
+  const raw = String(sendAtRaw).trim().replace(/\u00A0/g, " "); // remove weird non-breaking spaces
 
-    return dt.isValid ? dt : null;
+  // Try 24h with 1-2 digit hour
+  let dt = DateTime.fromFormat(raw, "yyyy-MM-dd H:mm", { zone: TIMEZONE });
+  if (dt.isValid) return dt;
+
+  // Fallback: some sheets return seconds
+  dt = DateTime.fromFormat(raw, "yyyy-MM-dd H:mm:ss", { zone: TIMEZONE });
+  if (dt.isValid) return dt;
+
+  // Fallback: if Google returns something like "2026-01-18 1:45 AM"
+  dt = DateTime.fromFormat(raw, "yyyy-MM-dd h:mm a", { zone: TIMEZONE });
+  if (dt.isValid) return dt;
+
+  return null;
 }
 
 async function pollAndSend() {
