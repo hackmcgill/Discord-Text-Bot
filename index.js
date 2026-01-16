@@ -184,6 +184,8 @@ async function pollAndSend() {
                 },
                 });
 
+                // Rate limit delay
+                await new Promise(r => setTimeout(r, 1200));
 
                 // Mark as sent
                 const sentAtStr = now.toFormat('yyyy-MM-dd HH:mm');
